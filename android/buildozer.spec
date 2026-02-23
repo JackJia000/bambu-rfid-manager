@@ -5,21 +5,25 @@ package.domain = org.bamburesearch
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas,json,txt
 version = 1.0.0
-requirements = python3,kivy,pyjnius,android,pyserial
+requirements = python3,kivy,pyjnius,android
+
 android.permissions = INTERNET,USB_PERMISSION,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
 android.features = android.hardware.usb.host
-android.sdk = 33
-android.archs = arm64-v8a,armeabi-v7a
+
+# 使用稳定的版本
+android.api = 33
+android.minapi = 21
+android.ndk = 25.2.9519653
+android.build_tools = 33.0.0
+android.archs = arm64-v8a
+
 orientation = portrait
 fullscreen = 0
 android.allow_backup = True
 
-# 使用稳定的 build-tools 版本，避免 rc 版本
-android.build_tools = 33.0.0
-android.api = 33
-android.minapi = 21
-android.ndk = 25.2.9519653
+# 禁用不必要的下载
+android.skip_update = True
 
 [buildozer]
 log_level = 2
-warn_on_root = 1
+warn_on_root = 0
