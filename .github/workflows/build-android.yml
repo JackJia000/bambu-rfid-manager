@@ -10,14 +10,23 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 45          # 增加超时时间
     
     steps:
-    - uses: actions/checkout@v4          # ← 升级：v3 → v4
+    - uses: actions/checkout@v4
     
     - name: Set up Python
-      uses: actions/setup-python@v5      # ← 建议也升级到 v5
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10'
+    
+    # 新增：配置网络和工具
+    - name: Configure environment
+      run: |
+        # 配置 git 和 curl 使用更好的网络设置
+        git config --global http.postBuffer 524288000
+        echo "PIP_NO_CACHE_DIR=1" >> $GITHUB_ENV
+        echo "PYTHONUNBUFFERED=1" >> $GITHUB_ENV
     
     - name: Install system dependencies
       run: |
@@ -44,31 +53,55 @@ jobs:
           autoconf \
           automake \
           libtool \
-          pkg-config
+          pkg-config \
+          wget curl
     
     - name: Install Buildozer
       run: |
+        pip install --upgrade pip
         pip install buildozer cython==0.29.36
     
-    - name: Cache Android SDK
-      uses: actions/cache@v4              # ← 升级：v3 → v4
+    # 修改缓存策略
+    - name: Cache Buildozer
+      uses: actions/cache@v4
       with:
         path: |
-          ~/.buildozer/android/platform
-          ~/.buildozer/android/packages
-        key: ${{ runner.os }}-android-sdk-${{ hashFiles('buildozer.spec') }}
+          ~/.buildozer
+          android/.buildozer
+        key: ${{ runner.os }}-buildozer-${{ hashFiles('android/buildozer.spec') }}
         restore-keys: |
-          ${{ runner.os }}-android-sdk-
+          ${{ runner.os }}-buildozer-
+    
+    # 新增：预下载 Android SDK 工具
+    - name: Setup Android SDK
+      run: |
+        mkdir -p ~/.buildozer/android/platform/android-sdk/cmdline-tools
+        cd ~/.buildozer/android/platform/android-sdk/cmdline-tools
+        if [ ! -d "latest" ]; then
+          wget -q --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 3 \
+            https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q commandlinetools-linux-11076708_latest.zip
+          mv cmdline-tools latest
+        fi
+        export ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
+        yes | latest/bin/sdkmanager --licenses || true
+        latest/bin/sdkmanager "build-tools;33.0.0" "platforms;android-33" || true
     
     - name: Build APK
+      working-directory: ./android
       run: |
-        cd android
-        buildozer -v android debug
+        export ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
+        # 使用重试机制
+        for i in 1 2 3; do
+          echo "Attempt $i..."
+          buildozer -v android debug && break || sleep 30
+        done
       env:
         BUILDOZER_WARN_ON_ROOT: '0'
+        ANDROID_SDK_ROOT: /home/runner/.buildozer/android/platform/android-sdk
     
     - name: Upload APK
-      uses: actions/upload-artifact@v4    # ← 升级：v3 → v4（这是导致失败的关键）
+      uses: actions/upload-artifact@v4
       with:
         name: bambu-rfid-apk
         path: android/bin/*.apk
@@ -76,7 +109,7 @@ jobs:
     
     - name: Create Release
       if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
-      uses: softprops/action-gh-release@v2  # ← 建议升级到 v2
+      uses: softprops/action-gh-release@v2
       with:
         files: android/bin/*.apk
       env:
