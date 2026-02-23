@@ -12,10 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4          # ← 升级：v3 → v4
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5      # ← 建议也升级到 v5
       with:
         python-version: '3.10'
     
@@ -51,7 +51,7 @@ jobs:
         pip install buildozer cython==0.29.36
     
     - name: Cache Android SDK
-      uses: actions/cache@v3
+      uses: actions/cache@v4              # ← 升级：v3 → v4
       with:
         path: |
           ~/.buildozer/android/platform
@@ -68,7 +68,7 @@ jobs:
         BUILDOZER_WARN_ON_ROOT: '0'
     
     - name: Upload APK
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4    # ← 升级：v3 → v4（这是导致失败的关键）
       with:
         name: bambu-rfid-apk
         path: android/bin/*.apk
@@ -76,7 +76,7 @@ jobs:
     
     - name: Create Release
       if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2  # ← 建议升级到 v2
       with:
         files: android/bin/*.apk
       env:
