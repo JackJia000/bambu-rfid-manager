@@ -81,3 +81,4 @@ jobs:
         files: android/bin/*.apk
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
