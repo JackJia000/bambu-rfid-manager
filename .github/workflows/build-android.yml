@@ -17,44 +17,59 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: 配置系统与 Python 镜像
         run: |
+          # 替换 Ubuntu apt 为清华镜像
+          sudo sed -i 's/archive.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list
+          sudo apt update && sudo apt install -y zip unzip
+
+          # 替换 Pip 为清华镜像
+          python -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           python -m pip install --upgrade pip
           pip install buildozer cython
 
+      # --- 核心：缓存并预下载 NDK ---
+      - name: 缓存 Android NDK (r23b)
+        uses: actions/cache@v4
+        id: ndk-cache
+        with:
+          path: ~/.buildozer/android/platform/android-ndk-r23b
+          key: ${{ runner.os }}-android-ndk-r23b
+
       - name: 预下载 Android NDK (r23b)
+        if: steps.ndk-cache.outputs.cache-hit != 'true'
         run: |
-           mkdir -p ~/.buildozer/android/platform
-           cd ~/.buildozer/android/platform
-           wget -c https://mirrors.tuna.tsinghua.edu.cn/android/repository/android-ndk-r23b-linux-x86_64.zip -O android-ndk.zip
-           unzip -q android-ndk.zip
-           rm android-ndk.zip
+          mkdir -p ~/.buildozer/android/platform
+          cd ~/.buildozer/android/platform
+          wget -c https://dl.google.com/android/repository/android-ndk-r23b-linux-x86_64.zip -O android-ndk.zip
+          unzip -q android-ndk.zip
+          rm android-ndk.zip
+
+      # --- 缓存并预下载 SDK ---
+      - name: 缓存 Android SDK
+        uses: actions/cache@v4
+        id: sdk-cache
+        with:
+          path: ~/.android
+          key: ${{ runner.os }}-android-sdk
 
       - name: 预下载 Android SDK
+        if: steps.sdk-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p ~/.android/cmdline-tools
           cd ~/.android/cmdline-tools
-          wget -O commandlinetools-linux.zip https://mirrors.tuna.tsinghua.edu.cn/android/repository/commandlinetools-linux-9477386_latest.zip
-          unzip -q commandlinetools-linux.zip
+          wget -c https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O commandlinetools.zip
+          unzip -q commandlinetools.zip
           mv cmdline-tools latest
-          rm commandlinetools-linux.zip
+          rm commandlinetools.zip
 
-      - name: Cache Buildozer dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.buildozer
-            ~/.android
-          key: ${{ runner.os }}-buildozer-${{ hashFiles('**/buildozer.spec') }}
-          restore-keys: |
-            ${{ runner.os }}-buildozer-
-
+      # --- 构建 APK ---
       - name: Build APK with Buildozer
         run: |
           buildozer -v android debug
         env:
-          # 强制 Buildozer 使用本地预下载的 NDK/SDK，不再尝试网络下载
-          ANDROID_NDK_HOME: /home/runner/.buildozer/android/platform/android-ndk-r25b
+          # 强制 Buildozer 使用本地预下载的 NDK/SDK
+          ANDROID_NDK_HOME: /home/runner/.buildozer/android/platform/android-ndk-r23b
           ANDROID_HOME: /home/runner/.android
 
       - name: Upload APK Artifact
