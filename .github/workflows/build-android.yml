@@ -16,7 +16,7 @@ jobs:
       contents: write  # 创建 Release 必须的权限
 
     steps:
-      # 1. 检出代码（必须确保完整检出，缓存依赖此步骤）
+      # 1. 检出代码
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -30,7 +30,7 @@ jobs:
           # 关键修复：指向 android 目录下的 requirements.txt（若为 pyproject.toml 则改为 android/pyproject.toml）
           cache-dependency-path: android/requirements.txt
 
-      # 3. 安装系统级依赖
+      # 3. 安装系统级依赖（已修复 libtinfo5 问题）
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -43,11 +43,11 @@ jobs:
             libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev zlib1g-dev \
             libgstreamer1.0-dev gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
             libffi-dev libssl-dev autoconf automake libtool pkg-config \
-            libncurses5-dev libncursesw5-dev libtinfo5 \
+            libncurses-dev libtinfo6 \
             lib32z1 lib32stdc++6 \
             openjdk-17-jdk
 
-      # 4. 安装 Buildozer 和 Cython（若有 requirements.txt，可改为 pip install -r android/requirements.txt）
+      # 4. 安装 Buildozer 和 Cython
       - name: Install Buildozer
         run: |
           python -m pip install --upgrade pip
@@ -58,7 +58,7 @@ jobs:
             python -m pip install buildozer cython==0.29.36
           fi
 
-      # 5. 缓存 Buildozer 依赖 (加速构建，避免重复下载 SDK/NDK)
+      # 5. 缓存 Buildozer 依赖
       - name: Cache Buildozer dependencies
         uses: actions/cache@v4
         with:
