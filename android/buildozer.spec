@@ -14,7 +14,7 @@ android.features = android.hardware.usb.host
 android.api = 33
 android.minapi = 21
 android.ndk=25d
-android.ndk_url = https://mirrors.tuna.tsinghua.edu.cn/android/repository/android-ndk-r25b-linux-x86_64.zip
+#android.ndk_url = https://mirrors.tuna.tsinghua.edu.cn/android/repository/android-ndk-r25b-linux-x86_64.zip
 android.build_tools = 33.0.0
 android.archs = arm64-v8a
 
